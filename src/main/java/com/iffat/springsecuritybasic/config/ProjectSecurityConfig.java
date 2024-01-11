@@ -27,8 +27,18 @@ public class ProjectSecurityConfig {
          * Configuration to deny all the request
          */
 
-        http.authorizeHttpRequests(auth -> auth
+        /* http.authorizeHttpRequests(auth -> auth
                         .anyRequest().denyAll())
+                .formLogin(Customizer.withDefaults())
+                .httpBasic(Customizer.withDefaults());
+        return http.build(); */
+
+        /*
+         * Configuration to permit all the request
+         */
+
+        http.authorizeHttpRequests(auth -> auth
+                        .anyRequest().permitAll())
                 .formLogin(Customizer.withDefaults())
                 .httpBasic(Customizer.withDefaults());
         return http.build();
