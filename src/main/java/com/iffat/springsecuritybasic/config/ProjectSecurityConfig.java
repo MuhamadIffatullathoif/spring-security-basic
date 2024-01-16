@@ -1,5 +1,6 @@
 package com.iffat.springsecuritybasic.config;
 
+import com.iffat.springsecuritybasic.filter.AuthoritiesLoggingAfterFilter;
 import com.iffat.springsecuritybasic.filter.CsrfCookieFilter;
 import com.iffat.springsecuritybasic.filter.RequestValidationBeforeFilter;
 import jakarta.servlet.*;
@@ -68,11 +69,8 @@ public class ProjectSecurityConfig {
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
                 .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class)
                 .addFilterBefore(new RequestValidationBeforeFilter(), BasicAuthenticationFilter.class)
+                .addFilterAfter(new AuthoritiesLoggingAfterFilter(), BasicAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
-//                        .requestMatchers("/myAccount").hasAuthority("VIEWACCOUNT")
-//                        .requestMatchers("/myBalance").hasAnyAuthority("VIEWACCOUNT", "VIEWBALANCE")
-//                        .requestMatchers("/myLoans").hasAuthority("VIEWLOANS")
-//                        .requestMatchers("/myCards").hasAuthority("VIEWCARDS")
                         .requestMatchers("/myAccount").hasRole("USER")
                         .requestMatchers("/myBalance").hasAnyRole("USER", "ADMIN")
                         .requestMatchers("/myLoans").hasRole("USER")
@@ -84,52 +82,13 @@ public class ProjectSecurityConfig {
         return http.build();
     }
 
-//    @Bean
-//    public InMemoryUserDetailsManager userDetailsService() {
-//        /*
-//         * Approach 1 where we use withDefaultPasswordEncoder() method
-//         * While creating the user details
-//         */
-////        UserDetails admin = User.withDefaultPasswordEncoder()
-////                .username("admin")
-////                .password("12345")
-////                .authorities("admin")
-////                .build();
-////        UserDetails user = User.withDefaultPasswordEncoder()
-////                .username("user")
-////                .password("12345")
-////                .authorities("read")
-////                .build();
-////        return new InMemoryUserDetailsManager(admin, user);
-//        /*
-//         * Approach 2 where we use NoOpPasswordEncoder Bean
-//         * While creating the user details
-//         * */
-//        UserDetails admin = User.withUsername("admin")
-//                .password("12345")
-//                .authorities("admin")
-//                .build();
-//        UserDetails user = User.withUsername("user")
-//                .password("12345")
-//                .authorities("read")
-//                .build();
-//        return new InMemoryUserDetailsManager(admin, user);
-//    }
-
-//    @Bean
-//    public UserDetailsService userDetailsService(DataSource dataSource) {
-//        return new JdbcUserDetailsManager(dataSource);
-//    }
-
-    /*
-     * No recommended on production NoOpPasswordEncoder
-     * */
-
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
+
+    /* Code below fix issue annotation @EnableWebSecurity(debug = true) */
     @Bean
     static BeanDefinitionRegistryPostProcessor beanDefinitionRegistryPostProcessor() {
         return registry -> registry.getBeanDefinition(AbstractSecurityWebApplicationInitializer.DEFAULT_FILTER_NAME).setBeanClassName(CompositeFilterChainProxy.class.getName());
@@ -200,10 +159,10 @@ public class ProjectSecurityConfig {
 
         private static FilterChainProxy findFilterChainProxy(List<? extends Filter> filters) {
             for (Filter filter : filters) {
-                if (filter instanceof FilterChainProxy fcp ) {
+                if (filter instanceof FilterChainProxy fcp) {
                     return fcp;
                 }
-                if (filter instanceof DebugFilter debugFilter ) {
+                if (filter instanceof DebugFilter debugFilter) {
                     return debugFilter.getFilterChainProxy();
                 }
             }
