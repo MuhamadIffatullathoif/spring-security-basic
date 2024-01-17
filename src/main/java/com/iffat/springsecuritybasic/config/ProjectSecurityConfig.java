@@ -30,6 +30,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.filter.CompositeFilter;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -48,10 +49,8 @@ public class ProjectSecurityConfig {
          */
 
         http
-                .securityContext(sec -> sec
-                        .requireExplicitSave(false))
                 .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.ALWAYS))
+                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .cors(corsConfig -> corsConfig.configurationSource(new CorsConfigurationSource() {
                     @Override
                     public CorsConfiguration getCorsConfiguration(HttpServletRequest request) {
@@ -60,6 +59,7 @@ public class ProjectSecurityConfig {
                         config.setAllowedMethods(Collections.singletonList("*"));
                         config.setAllowCredentials(true);
                         config.setAllowedHeaders(Collections.singletonList("*"));
+                        config.setExposedHeaders(Arrays.asList("Authorization"));
                         config.setMaxAge(3600L);
                         return config;
                     }
