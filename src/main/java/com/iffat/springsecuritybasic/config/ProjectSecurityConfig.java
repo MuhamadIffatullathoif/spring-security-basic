@@ -1,6 +1,7 @@
 package com.iffat.springsecuritybasic.config;
 
 import com.iffat.springsecuritybasic.filter.AuthoritiesLoggingAfterFilter;
+import com.iffat.springsecuritybasic.filter.AuthorizationLoggingAtFilter;
 import com.iffat.springsecuritybasic.filter.CsrfCookieFilter;
 import com.iffat.springsecuritybasic.filter.RequestValidationBeforeFilter;
 import jakarta.servlet.*;
@@ -69,6 +70,7 @@ public class ProjectSecurityConfig {
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
                 .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class)
                 .addFilterBefore(new RequestValidationBeforeFilter(), BasicAuthenticationFilter.class)
+                .addFilterAt(new AuthorizationLoggingAtFilter(), BasicAuthenticationFilter.class)
                 .addFilterAfter(new AuthoritiesLoggingAfterFilter(), BasicAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/myAccount").hasRole("USER")
