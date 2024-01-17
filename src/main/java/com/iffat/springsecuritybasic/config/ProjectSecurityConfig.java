@@ -1,9 +1,6 @@
 package com.iffat.springsecuritybasic.config;
 
-import com.iffat.springsecuritybasic.filter.AuthoritiesLoggingAfterFilter;
-import com.iffat.springsecuritybasic.filter.AuthorizationLoggingAtFilter;
-import com.iffat.springsecuritybasic.filter.CsrfCookieFilter;
-import com.iffat.springsecuritybasic.filter.RequestValidationBeforeFilter;
+import com.iffat.springsecuritybasic.filter.*;
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProcessor;
@@ -72,6 +69,7 @@ public class ProjectSecurityConfig {
                 .addFilterBefore(new RequestValidationBeforeFilter(), BasicAuthenticationFilter.class)
                 .addFilterAt(new AuthorizationLoggingAtFilter(), BasicAuthenticationFilter.class)
                 .addFilterAfter(new AuthoritiesLoggingAfterFilter(), BasicAuthenticationFilter.class)
+                .addFilterAfter(new JWTTokenGeneratorFilter(), BasicAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/myAccount").hasRole("USER")
                         .requestMatchers("/myBalance").hasAnyRole("USER", "ADMIN")
