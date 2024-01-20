@@ -13,6 +13,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.context.SecurityContextHolderStrategy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.FilterChainProxy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
@@ -32,7 +33,6 @@ import java.util.Collections;
 import java.util.List;
 
 @Configuration
-@EnableWebSecurity(debug = true)
 public class ProjectSecurityConfig {
 
     @Bean
@@ -40,6 +40,9 @@ public class ProjectSecurityConfig {
 
         CsrfTokenRequestAttributeHandler requestHandler = new CsrfTokenRequestAttributeHandler();
         requestHandler.setCsrfRequestAttributeName("_csrf");
+
+        JwtAuthenticationConverter jwtAuthenticationConverter = new JwtAuthenticationConverter();
+        jwtAuthenticationConverter.setJwtGrantedAuthoritiesConverter(new KeycloakRoleConverter());
 
         /*
          * Below is the custom security configuration
@@ -66,10 +69,6 @@ public class ProjectSecurityConfig {
                         .ignoringRequestMatchers("/contact", "/register")
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
                 .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class)
-                .addFilterBefore(new RequestValidationBeforeFilter(), BasicAuthenticationFilter.class)
-                .addFilterAt(new AuthorizationLoggingAtFilter(), BasicAuthenticationFilter.class)
-                .addFilterAfter(new AuthoritiesLoggingAfterFilter(), BasicAuthenticationFilter.class)
-                .addFilterAfter(new JWTTokenGeneratorFilter(), BasicAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/myAccount").hasRole("USER")
                         .requestMatchers("/myBalance").hasAnyRole("USER", "ADMIN")
@@ -77,97 +76,8 @@ public class ProjectSecurityConfig {
                         .requestMatchers("/myCards").hasRole("USER")
                         .requestMatchers("/user").authenticated()
                         .requestMatchers("/notices", "/contact", "/register").permitAll())
-                .formLogin(Customizer.withDefaults())
-                .httpBasic(Customizer.withDefaults());
+                .oauth2ResourceServer(oauth2 -> oauth2
+                        .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter)));
         return http.build();
-    }
-
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
-
-
-    /* Code below fix issue annotation @EnableWebSecurity(debug = true) */
-    @Bean
-    static BeanDefinitionRegistryPostProcessor beanDefinitionRegistryPostProcessor() {
-        return registry -> registry.getBeanDefinition(AbstractSecurityWebApplicationInitializer.DEFAULT_FILTER_NAME).setBeanClassName(CompositeFilterChainProxy.class.getName());
-    }
-
-    static class CompositeFilterChainProxy extends FilterChainProxy {
-
-        private final Filter doFilterDelegate;
-
-        private final FilterChainProxy springSecurityFilterChain;
-
-        CompositeFilterChainProxy(List<? extends Filter> filters) {
-            this.doFilterDelegate = createDoFilterDelegate(filters);
-            this.springSecurityFilterChain = findFilterChainProxy(filters);
-        }
-
-        @Override
-        public void afterPropertiesSet() {
-            this.springSecurityFilterChain.afterPropertiesSet();
-        }
-
-        @Override
-        public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
-                throws IOException, ServletException {
-            this.doFilterDelegate.doFilter(request, response, chain);
-        }
-
-        @Override
-        public List<Filter> getFilters(String url) {
-            return this.springSecurityFilterChain.getFilters(url);
-        }
-
-        @Override
-        public List<SecurityFilterChain> getFilterChains() {
-            return this.springSecurityFilterChain.getFilterChains();
-        }
-
-        @Override
-        public void setSecurityContextHolderStrategy(SecurityContextHolderStrategy securityContextHolderStrategy) {
-            this.springSecurityFilterChain.setSecurityContextHolderStrategy(securityContextHolderStrategy);
-        }
-
-        @Override
-        public void setFilterChainValidator(FilterChainValidator filterChainValidator) {
-            this.springSecurityFilterChain.setFilterChainValidator(filterChainValidator);
-        }
-
-        @Override
-        public void setFilterChainDecorator(FilterChainDecorator filterChainDecorator) {
-            this.springSecurityFilterChain.setFilterChainDecorator(filterChainDecorator);
-        }
-
-        @Override
-        public void setFirewall(HttpFirewall firewall) {
-            this.springSecurityFilterChain.setFirewall(firewall);
-        }
-
-        @Override
-        public void setRequestRejectedHandler(RequestRejectedHandler requestRejectedHandler) {
-            this.springSecurityFilterChain.setRequestRejectedHandler(requestRejectedHandler);
-        }
-
-        private static Filter createDoFilterDelegate(List<? extends Filter> filters) {
-            CompositeFilter delegate = new CompositeFilter();
-            delegate.setFilters(filters);
-            return delegate;
-        }
-
-        private static FilterChainProxy findFilterChainProxy(List<? extends Filter> filters) {
-            for (Filter filter : filters) {
-                if (filter instanceof FilterChainProxy fcp) {
-                    return fcp;
-                }
-                if (filter instanceof DebugFilter debugFilter) {
-                    return debugFilter.getFilterChainProxy();
-                }
-            }
-            throw new IllegalStateException("Couldn't find FilterChainProxy in " + filters);
-        }
-
     }
 }
